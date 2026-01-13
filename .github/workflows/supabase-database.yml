@@ -1,0 +1,52 @@
+name: Supabase Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "database/**"
+
+jobs:
+  deploy:
+    name: Deploy to Supabase
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./database
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Set Environment Variables
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == 'refs/heads/main' ]]; then
+            echo "Selected Environment: PRODUCTION"
+            echo "SUPABASE_PROJECT_ID=${{ secrets.SUPABASE_PROD_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "DB_PASSWORD=${{ secrets.SUPABASE_PROD_DB_PASSWORD }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == 'refs/heads/develop' ]]; then
+            echo "Selected Environment: STAGING (DEV)"
+            echo "SUPABASE_PROJECT_ID=${{ secrets.SUPABASE_STAGING_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "DB_PASSWORD=${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}" >> $GITHUB_ENV
+          fi
+
+      - name: Link Supabase Project
+        run: supabase link --project-ref $SUPABASE_PROJECT_ID
+
+      - name: Deploy to Staging DB
+        if: github.ref == 'refs/heads/develop'
+        run: supabase db push
+
+      - name: Deploy to Production DB
+        if: github.ref == 'refs/heads/main'
+        run: supabase db push

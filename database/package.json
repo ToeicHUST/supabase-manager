@@ -1,0 +1,20 @@
+{
+  "name": "database",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx supabase start",
+    "status": "npx supabase status",
+    "stop": "npx supabase stop --no-backup",
+    "start:dev": "npx supabase migration new toeichust",
+    "apply": "npx supabase db reset"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "supabase": "^2.72.3"
+  }
+}
