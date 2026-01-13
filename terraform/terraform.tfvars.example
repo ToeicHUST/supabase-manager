@@ -1,0 +1,5 @@
+supabase_access_token = "sbp_..."             # Token bạn vừa tạo
+organization_id       = "abc..."              # ID tổ chức của bạn
+db_password           = "MatKhauSieuManh123!" # Phải có chữ hoa, thường, số
+project_name          = "My New App"
+region                = "ap-southeast-1" # Singapore (tốt cho VN)
