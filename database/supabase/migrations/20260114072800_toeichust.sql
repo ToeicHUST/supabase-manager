@@ -1,2 +1,2 @@
 DROP SCHEMA IF EXISTS toeichust_logs CASCADE;
-CREATE SCHEMA IF NOT EXISTS toeichust_api-logs;
+CREATE SCHEMA IF NOT EXISTS toeichust_api_logs;
