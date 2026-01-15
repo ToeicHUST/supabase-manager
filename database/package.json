@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npx supabase start",
     "status": "npx supabase status",
-    "stop": "npx supabase stop --no-backup",
+    "stop": "npx supabase stop --no-backup && docker rm -f $(docker ps -a -q -f name=supabase)",
     "start:dev": "npx supabase migration new toeichust",
     "apply": "npx supabase db reset"
   },
