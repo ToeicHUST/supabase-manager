@@ -1,28 +1,40 @@
-create table public.admin_whitelist (
+-- 1. Tạo bảng whitelist (Dùng IF NOT EXISTS để không lỗi nếu bảng đã có)
+create table if not exists public.admin_whitelist (
   email text primary key
 );
 
--- Thêm email của bạn vào danh sách
-insert into public.admin_whitelist (email) 
-values
-    ('vuvannghia.4522@gmail.com'),
-    ('vuvannghia.work@gmail.com');
-
--- Bật RLS để bảo vệ bảng này (chỉ service_role mới đọc được, tránh user thường nhìn thấy)
+-- Bật RLS. Mặc định nếu không có policy nào, không ai (trừ service_role) đọc được bảng này.
+-- Điều này TỐT cho bảo mật.
 alter table public.admin_whitelist enable row level security;
 
--- 1. Tạo hàm xử lý việc gán role
+-- 2. Thêm email (Dùng ON CONFLICT để tránh lỗi duplicate key nếu chạy lại)
+insert into public.admin_whitelist (email) 
+values 
+  ('vuvannghia.4522@gmail.com'),
+  ('vuvannghia.work@gmail.com')
+on conflict (email) do nothing;
+
+-- 3. Tạo hàm xử lý
 create or replace function public.handle_new_user_role()
-returns trigger as $$
+returns trigger 
+language plpgsql 
+security definer -- Chạy với quyền của người tạo hàm (bỏ qua RLS của bảng whitelist)
+set search_path = public -- QUAN TRỌNG: Cố định search_path để bảo mật
+as $$
 declare
   is_admin boolean;
 begin
-  -- Kiểm tra xem email đăng ký có nằm trong bảng whitelist không
-  select exists(select 1 from public.admin_whitelist where email = new.email) into is_admin;
+  -- So sánh email dạng chữ thường để chính xác tuyệt đối
+  select exists(
+    select 1 
+    from public.admin_whitelist 
+    where lower(email) = lower(new.email)
+  ) into is_admin;
 
   if is_admin then
     new.raw_app_meta_data = 
       jsonb_set(coalesce(new.raw_app_meta_data, '{}'::jsonb), '{role}', '"admin"');
+    
   else
     new.raw_app_meta_data = 
       jsonb_set(coalesce(new.raw_app_meta_data, '{}'::jsonb), '{role}', '"user"');
@@ -30,10 +42,12 @@ begin
   
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
--- 2. Gán trigger vào bảng auth.users
--- Lưu ý: Dùng BEFORE INSERT để sửa data trước khi ghi xuống
+-- 4. Gán Trigger
+-- Xóa trigger cũ nếu tồn tại để tránh lỗi duplicate trigger
+drop trigger if exists on_auth_user_created_add_role on auth.users;
+
 create trigger on_auth_user_created_add_role
   before insert on auth.users
   for each row execute procedure public.handle_new_user_role();
